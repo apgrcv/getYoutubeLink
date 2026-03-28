@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YouTube Shorts Link Collector</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section class="hero">
+        <p class="eyebrow">半自动采集</p>
+        <h1>YouTube Shorts 链接助手</h1>
+        <p class="subtitle">手动滚动页面，点击一次即可采集当前可见卡片、记录断点并导出 Excel 兼容表格。</p>
+      </section>
+
+      <section class="panel">
+        <div class="meta-row">
+          <span class="label">当前页面</span>
+          <strong id="pageTitle">等待识别...</strong>
+        </div>
+        <div class="meta-grid">
+          <div>
+            <span class="label">页面类型</span>
+            <strong id="pageType">-</strong>
+          </div>
+          <div>
+            <span class="label">排序</span>
+            <strong id="sortLabel">-</strong>
+          </div>
+          <div>
+            <span class="label">已采集</span>
+            <strong id="totalCount">0</strong>
+          </div>
+          <div>
+            <span class="label">批次</span>
+            <strong id="batchNo">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel actions">
+        <button id="scanButton" class="primary">采集当前可见封面</button>
+        <button id="exportExcelButton">导出 Excel 兼容表格</button>
+        <button id="exportJsonButton">导出 JSON 备份</button>
+        <button id="resetButton" class="danger">清空当前页面进度</button>
+      </section>
+
+      <section class="panel">
+        <div class="status-header">
+          <span class="label">最近一次进度</span>
+          <strong id="lastScanAt">尚未采集</strong>
+        </div>
+        <p id="scanResult" class="hint">提示：先切到目标频道的 Shorts 页面，再点击“采集当前可见封面”。</p>
+        <div class="checkpoint">
+          <span class="label">上次停在</span>
+          <img id="lastThumbnail" class="thumbnail hidden" alt="最后一个封面缩略图" />
+          <strong id="lastTitle">暂无记录</strong>
+          <span id="lastScrollY" class="small-text">滚动位置：-</span>
+          <a id="lastUrl" href="#" target="_blank" rel="noreferrer">-</a>
+        </div>
+      </section>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
