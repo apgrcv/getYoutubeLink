@@ -1,17 +1,17 @@
 {
   "manifest_version": 3,
-  "name": "YouTube Shorts Link Collector",
-  "description": "半自动采集当前可见的 YouTube Shorts 视频链接，记录断点并导出 Excel 兼容表格。",
+  "name": "Short Video Link Collector",
+  "description": "半自动采集当前可见的短视频卡片链接，记录断点并导出 Excel 兼容表格。",
   "version": "0.1.0",
   "permissions": ["storage", "downloads", "tabs", "activeTab", "scripting"],
-  "host_permissions": ["https://www.youtube.com/*"],
+  "host_permissions": ["https://www.youtube.com/*", "https://www.tiktok.com/*"],
   "action": {
-    "default_title": "YT Shorts Collector",
+    "default_title": "Short Video Collector",
     "default_popup": "popup.html"
   },
   "content_scripts": [
     {
-      "matches": ["https://www.youtube.com/*"],
+      "matches": ["https://www.youtube.com/*", "https://www.tiktok.com/*"],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

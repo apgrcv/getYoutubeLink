@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YouTube Shorts Link Collector</title>
+    <title>Short Video Link Collector</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main class="app">
       <section class="hero">
         <p class="eyebrow">半自动采集</p>
-        <h1>YouTube Shorts 链接助手</h1>
-        <p class="subtitle">手动滚动页面，点击一次即可采集当前可见卡片、记录断点并导出 Excel 兼容表格。</p>
+        <h1>短视频链接助手</h1>
+        <p class="subtitle">支持 YouTube Shorts 与 TikTok 主页视频列表。手动滚动页面，点击一次即可采集当前可见卡片、记录断点并导出 Excel 兼容表格。</p>
       </section>
 
       <section class="panel">
@@ -51,7 +51,7 @@
           <span class="label">最近一次进度</span>
           <strong id="lastScanAt">尚未采集</strong>
         </div>
-        <p id="scanResult" class="hint">提示：先切到目标频道的 Shorts 页面，再点击“采集当前可见封面”。</p>
+        <p id="scanResult" class="hint">提示：先切到目标 YouTube Shorts 页面或 TikTok 主页视频列表，再点击“采集当前可见封面”。</p>
         <div class="checkpoint">
           <span class="label">上次停在</span>
           <img id="lastThumbnail" class="thumbnail hidden" alt="最后一个封面缩略图" />

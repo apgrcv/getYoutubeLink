@@ -33,7 +33,7 @@ function setStorage(state) {
 }
 
 function sanitizeFilename(input) {
-  return (input || 'yt-shorts')
+  return (input || 'short-video-links')
     .replace(/[\\/:*?"<>|]+/g, '-')
     .replace(/\s+/g, '_')
     .slice(0, 80);
@@ -203,16 +203,21 @@ function renderState(pageMeta, dataset) {
 
 async function refreshPageState() {
   currentTab = await getActiveTab();
-  if (!currentTab || !currentTab.url || !currentTab.url.startsWith('https://www.youtube.com/')) {
+  const isSupportedTab =
+    currentTab &&
+    currentTab.url &&
+    (currentTab.url.startsWith('https://www.youtube.com/') || currentTab.url.startsWith('https://www.tiktok.com/'));
+
+  if (!isSupportedTab) {
     renderState(
       {
-        pageTitle: '请先打开 YouTube 页面',
+        pageTitle: '请先打开 YouTube 或 TikTok 页面',
         pageType: '-',
         sortLabel: '-'
       },
       null
     );
-    elements.scanResult.textContent = '当前标签页不是 YouTube，请切到目标频道 Shorts 页面后再操作。';
+    elements.scanResult.textContent = '当前标签页不是受支持页面，请切到目标 YouTube Shorts 页面或 TikTok 主页视频列表后再操作。';
     return;
   }
 
@@ -305,8 +310,8 @@ async function handleScan() {
     if (!payload.ok) {
       throw new Error(payload.error || '采集失败');
     }
-    if (payload.pageMeta.pageType !== 'shorts') {
-      elements.scanResult.textContent = '当前页面不是频道 Shorts 页面，请切到 Shorts 页签后再采集。';
+    if (payload.pageMeta.pageType === 'unknown') {
+      elements.scanResult.textContent = '当前页面暂不支持采集，请切到 YouTube Shorts 页面或 TikTok 主页视频列表后再试。';
       return;
     }
 
