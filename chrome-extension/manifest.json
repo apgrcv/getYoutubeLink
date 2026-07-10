@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Short Video Link Collector",
   "description": "半自动采集当前可见的短视频卡片链接，记录断点并导出 Excel 兼容表格。",
-  "version": "0.1.0",
-  "permissions": ["storage", "downloads", "tabs", "activeTab", "scripting"],
+  "version": "0.1.1",
+  "permissions": ["storage", "unlimitedStorage", "downloads", "tabs", "activeTab", "scripting"],
   "host_permissions": ["https://www.youtube.com/*", "https://www.tiktok.com/*"],
   "action": {
     "default_title": "Short Video Collector",

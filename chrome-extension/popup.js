@@ -1,4 +1,6 @@
 const STORAGE_KEY = 'ytShortsCollectorState';
+const STORAGE_VERSION = 2;
+const MAX_SCAN_HISTORY = 120;
 
 const elements = {
   pageTitle: document.getElementById('pageTitle'),
@@ -22,14 +24,175 @@ let currentTab = null;
 let currentPageMeta = null;
 let currentState = null;
 
+function createEmptyStorage() {
+  return { version: STORAGE_VERSION, datasets: {} };
+}
+
+function normalizePageMeta(pageMeta, contextKey = '') {
+  const source = pageMeta && typeof pageMeta === 'object' ? pageMeta : {};
+  return {
+    platform: source.platform || '',
+    pageTitle: source.pageTitle || '',
+    pageType: source.pageType || 'unknown',
+    sortLabel: source.sortLabel || '',
+    channelName: source.channelName || '',
+    channelUrl: source.channelUrl || '',
+    baseUrl: source.baseUrl || '',
+    contextKey: source.contextKey || contextKey
+  };
+}
+
+function normalizeStoredItem(item, fallbackIndex = 0) {
+  if (!item || typeof item !== 'object') {
+    return null;
+  }
+
+  const url = item.url || '';
+  const videoId = item.videoId || '';
+  if (!url && !videoId) {
+    return null;
+  }
+
+  const normalized = {
+    captureIndex: Number.isFinite(item.captureIndex) && item.captureIndex > 0 ? item.captureIndex : fallbackIndex + 1,
+    batchNo: Number.isFinite(item.batchNo) && item.batchNo >= 0 ? item.batchNo : 0,
+    screenOrder: Number.isFinite(item.screenOrder) && item.screenOrder >= 0 ? item.screenOrder : fallbackIndex + 1,
+    title: item.title || '',
+    url,
+    videoId,
+    capturedAt: item.capturedAt || ''
+  };
+
+  if (item.publishedDate) {
+    normalized.publishedDate = item.publishedDate;
+  }
+  if (item.thumbnailUrl) {
+    normalized.thumbnailUrl = item.thumbnailUrl;
+  }
+  if (item.note) {
+    normalized.note = item.note;
+  }
+
+  return normalized;
+}
+
+function normalizeScanHistoryEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return null;
+  }
+  return {
+    batchNo: Number.isFinite(entry.batchNo) && entry.batchNo >= 0 ? entry.batchNo : 0,
+    scannedAt: entry.scannedAt || '',
+    visibleCount: Number.isFinite(entry.visibleCount) && entry.visibleCount >= 0 ? entry.visibleCount : 0,
+    addedCount: Number.isFinite(entry.addedCount) && entry.addedCount >= 0 ? entry.addedCount : 0,
+    lastTitle: entry.lastTitle || '',
+    lastUrl: entry.lastUrl || ''
+  };
+}
+
+function normalizeLastCheckpoint(lastCheckpoint) {
+  if (!lastCheckpoint || typeof lastCheckpoint !== 'object') {
+    return null;
+  }
+
+  const url = lastCheckpoint.url || '';
+  const videoId = lastCheckpoint.videoId || '';
+  if (!url && !videoId) {
+    return null;
+  }
+
+  const normalized = {
+    title: lastCheckpoint.title || '',
+    url,
+    videoId,
+    batchNo: Number.isFinite(lastCheckpoint.batchNo) && lastCheckpoint.batchNo >= 0 ? lastCheckpoint.batchNo : 0,
+    screenOrder: Number.isFinite(lastCheckpoint.screenOrder) && lastCheckpoint.screenOrder >= 0 ? lastCheckpoint.screenOrder : 0,
+    scrollY: Number.isFinite(lastCheckpoint.scrollY) ? lastCheckpoint.scrollY : null,
+    capturedAt: lastCheckpoint.capturedAt || ''
+  };
+
+  if (lastCheckpoint.thumbnailUrl) {
+    normalized.thumbnailUrl = lastCheckpoint.thumbnailUrl;
+  }
+
+  return normalized;
+}
+
+function normalizeDataset(dataset, contextKey = '') {
+  const source = dataset && typeof dataset === 'object' ? dataset : {};
+  const items = Array.isArray(source.items)
+    ? source.items
+        .map((item, index) => normalizeStoredItem(item, index))
+        .filter(Boolean)
+        .sort((left, right) => left.captureIndex - right.captureIndex)
+    : [];
+
+  const scanHistory = Array.isArray(source.scanHistory)
+    ? source.scanHistory
+        .map((entry) => normalizeScanHistoryEntry(entry))
+        .filter(Boolean)
+        .slice(-MAX_SCAN_HISTORY)
+    : [];
+
+  return {
+    pageMeta: normalizePageMeta(source.pageMeta, contextKey),
+    items,
+    batchNo: Number.isFinite(source.batchNo) && source.batchNo >= 0 ? source.batchNo : 0,
+    lastScanAt: source.lastScanAt || '',
+    scanHistory,
+    lastCheckpoint: normalizeLastCheckpoint(source.lastCheckpoint)
+  };
+}
+
+function normalizeStorageState(rawState) {
+  const source = rawState && typeof rawState === 'object' ? rawState : {};
+  const rawDatasets = source.datasets && typeof source.datasets === 'object' ? source.datasets : {};
+  const datasets = {};
+
+  for (const [contextKey, dataset] of Object.entries(rawDatasets)) {
+    datasets[contextKey] = normalizeDataset(dataset, contextKey);
+  }
+
+  return {
+    version: STORAGE_VERSION,
+    datasets
+  };
+}
+
+function makeStoredRecord(row, batchNo, captureIndex, capturedAt) {
+  const record = {
+    captureIndex,
+    batchNo,
+    screenOrder: Number.isFinite(row.screenOrder) && row.screenOrder >= 0 ? row.screenOrder : captureIndex,
+    title: row.title || '',
+    url: row.url || '',
+    videoId: row.videoId || '',
+    capturedAt
+  };
+
+  if (row.publishedDate) {
+    record.publishedDate = row.publishedDate;
+  }
+  if (row.thumbnailUrl) {
+    record.thumbnailUrl = row.thumbnailUrl;
+  }
+
+  return record;
+}
+
+function isQuotaError(error) {
+  const message = String(error && error.message ? error.message : error || '');
+  return /QUOTA_BYTES|quota/i.test(message);
+}
+
 function getStorage() {
   return chrome.storage.local.get(STORAGE_KEY).then((result) => {
-    return result[STORAGE_KEY] || { version: 1, datasets: {} };
+    return normalizeStorageState(result[STORAGE_KEY] || createEmptyStorage());
   });
 }
 
 function setStorage(state) {
-  return chrome.storage.local.set({ [STORAGE_KEY]: state });
+  return chrome.storage.local.set({ [STORAGE_KEY]: normalizeStorageState(state) });
 }
 
 function sanitizeFilename(input) {
@@ -95,6 +258,7 @@ function getFileBaseName(pageMeta) {
 }
 
 function buildExcelHtml(dataset) {
+  const pageMeta = dataset.pageMeta || {};
   const headers = [
     '序号',
     '频道名',
@@ -118,10 +282,10 @@ function buildExcelHtml(dataset) {
     .map((item) => {
       return [
         item.captureIndex,
-        item.channelName,
-        item.channelUrl,
-        item.pageType,
-        item.sortLabel,
+        item.channelName || pageMeta.channelName || '',
+        item.channelUrl || pageMeta.channelUrl || '',
+        item.pageType || pageMeta.pageType || '',
+        item.sortLabel || pageMeta.sortLabel || '',
         item.batchNo,
         item.screenOrder,
         item.title,
@@ -229,7 +393,7 @@ async function refreshPageState() {
 
 function mergeScanResult(dataset, payload) {
   const now = new Date().toISOString();
-  const items = Array.isArray(dataset.items) ? dataset.items.slice() : [];
+  const items = Array.isArray(dataset.items) ? dataset.items.map((item, index) => normalizeStoredItem(item, index)).filter(Boolean) : [];
   const existing = new Map();
   for (const item of items) {
     const key = item.videoId || item.url;
@@ -249,24 +413,19 @@ function mergeScanResult(dataset, payload) {
 
     if (existing.has(key)) {
       const target = existing.get(key);
-      target.lastSeenAt = now;
-      target.lastSeenBatchNo = batchNo;
-      target.lastSeenOrder = row.screenOrder;
+      if (!target.title && row.title) {
+        target.title = row.title;
+      }
       if (!target.publishedDate && row.publishedDate) {
         target.publishedDate = row.publishedDate;
+      }
+      if (!target.thumbnailUrl && row.thumbnailUrl) {
+        target.thumbnailUrl = row.thumbnailUrl;
       }
       continue;
     }
 
-    const record = {
-      ...row,
-      captureIndex: items.length + 1,
-      batchNo,
-      capturedAt: now,
-      lastSeenAt: now,
-      lastSeenBatchNo: batchNo,
-      lastSeenOrder: row.screenOrder
-    };
+    const record = makeStoredRecord(row, batchNo, items.length + 1, now);
     items.push(record);
     existing.set(key, record);
     addedCount += 1;
@@ -276,7 +435,7 @@ function mergeScanResult(dataset, payload) {
 
   return {
     ...dataset,
-    pageMeta: payload.pageMeta,
+    pageMeta: normalizePageMeta(payload.pageMeta, payload.pageMeta.contextKey),
     batchNo,
     items,
     lastScanAt: now,
@@ -287,7 +446,7 @@ function mergeScanResult(dataset, payload) {
       addedCount,
       lastTitle: lastItem ? lastItem.title : '',
       lastUrl: lastItem ? lastItem.url : ''
-    }],
+    }].slice(-MAX_SCAN_HISTORY),
     lastCheckpoint: lastItem
       ? {
           title: lastItem.title,
@@ -329,7 +488,11 @@ async function handleScan() {
     renderState(payload.pageMeta, merged);
     elements.scanResult.textContent = `本次扫描到 ${payload.visibleCount} 个封面，新增 ${merged.scanHistory[merged.scanHistory.length - 1].addedCount} 条，总计 ${merged.items.length} 条。`;
   } catch (error) {
-    elements.scanResult.textContent = `采集失败：${error.message || error}`;
+    if (isQuotaError(error)) {
+      elements.scanResult.textContent = '采集失败：浏览器本地存储空间已满。请重新加载更新后的扩展后再试；如仍失败，可先导出并清空部分旧页面进度。';
+    } else {
+      elements.scanResult.textContent = `采集失败：${error.message || error}`;
+    }
   } finally {
     elements.scanButton.disabled = false;
   }
